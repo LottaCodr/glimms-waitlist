@@ -21,7 +21,7 @@ export function ReferralNotificationEmail({
     <Html>
       <Head />
       <Preview>
-        Someone joined Glimms using your link — you&apos;re now #{newPosition} 🎉
+        {`Someone joined Glimms using your link — you're now #${newPosition} 🎉`}
       </Preview>
 
       <Body style={body}>

@@ -2,14 +2,21 @@ import { Resend } from 'resend';
 import { WelcomeEmail } from '@/emails/WelcomeEmail';
 import { ReferralNotificationEmail } from '@/emails/ReferralNotificationEmail';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resendClient: Resend | null = null;
+function getResend(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
+
 const FROM = `${process.env.RESEND_FROM_NAME ?? 'Glimms'} <${process.env.RESEND_FROM_EMAIL ?? 'hello@glimms.ai'}>`;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://glimms.ai';
 
 export async function sendWelcomeEmail(opts: {
   email: string; name: string | null; position: number; referralCode: string;
 }) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from:    FROM,
     to:      opts.email,
     subject: `You're on the Glimms waitlist — position #${opts.position}`,
@@ -27,7 +34,7 @@ export async function sendReferralNotificationEmail(opts: {
   referrerEmail: string; referrerName: string | null;
   newPosition: number; referralCount: number; referralCode: string;
 }) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from:    FROM,
     to:      opts.referrerEmail,
     subject: `Someone joined Glimms using your link 🎉`,

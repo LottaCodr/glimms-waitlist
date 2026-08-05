@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const { count } = await supabaseAdmin()

@@ -19,7 +19,7 @@ export function WelcomeEmail({ name, position, referralUrl, referralCode }: Prop
     <Html>
       <Head />
       <Preview>
-        You&apos;re #{position} on the Glimms waitlist — here&apos;s your referral link.
+        You&apos;re #{position.toLocaleString()} on the Glimms waitlist — here&apos;s your referral link.
       </Preview>
 
       <Body style={body}>

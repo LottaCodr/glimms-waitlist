@@ -2,6 +2,8 @@ import { redirect }     from 'next/navigation';
 import { cookies }      from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 interface Props { params: { code: string } }
 
 export default async function ReferralRedirectPage({ params }: Props) {

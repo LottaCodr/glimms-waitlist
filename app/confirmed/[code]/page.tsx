@@ -4,6 +4,8 @@ import { ReferralShare }  from '@/components/ReferralShare';
 import { Nav }            from '@/components/Nav';
 import { Footer }         from '@/components/Footer';
 
+export const dynamic = 'force-dynamic';
+
 interface Props { params: { code: string } }
 
 export default async function ConfirmedPage({ params }: Props) {

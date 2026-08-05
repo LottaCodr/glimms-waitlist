@@ -1,13 +1,18 @@
 async function getCount(): Promise<number> {
+  const base = parseInt(process.env.NEXT_PUBLIC_BASE_COUNT ?? '2847');
   try {
+    const url = process.env.NEXT_PUBLIC_APP_URL;
+    if (!url) return base;
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/stats`,
       { next: { revalidate: 60 } },
     );
+
+    if (!res.ok) return base;
     const data = await res.json();
-    return data.count ?? parseInt(process.env.NEXT_PUBLIC_BASE_COUNT ?? '2847');
+    return data.count ?? base;
   } catch {
-    return parseInt(process.env.NEXT_PUBLIC_BASE_COUNT ?? '2847');
+    return base;
   }
 }
 

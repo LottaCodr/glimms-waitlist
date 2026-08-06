@@ -8,12 +8,14 @@ node_modules/
 out/
 build/
 
-# env
+# env — never commit real secrets. Only .env.example is versioned.
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+!.env.test
+*.env
+*.env.local
+*.env.*.local
 
 # misc
 .DS_Store
@@ -28,3 +30,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# supabase
+.supabase/

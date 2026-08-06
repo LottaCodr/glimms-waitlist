@@ -4,18 +4,19 @@ import {
 } from '@react-email/components';
 
 interface Props {
-  name:          string | null;
-  newPosition:   number;
+  name: string | null;
+  newPosition: number;
   referralCount: number;
-  referralUrl:   string;
-  dashboardUrl:  string;
+  referralUrl: string;
+  dashboardUrl: string;
+  unsubscribeUrl: string;
 }
 
 export function ReferralNotificationEmail({
-  name, newPosition, referralCount, referralUrl, dashboardUrl,
+  name, newPosition, referralCount, referralUrl, dashboardUrl, unsubscribeUrl,
 }: Props) {
   const firstName = name?.split(' ')[0] ?? null;
-  const greeting  = firstName ? `Hey ${firstName}` : 'Hey';
+  const greeting = firstName ? `Hey ${firstName}` : 'Hey';
 
   return (
     <Html>
@@ -85,7 +86,7 @@ export function ReferralNotificationEmail({
           <Section style={footer}>
             <Text style={footerText}>
               You&apos;re receiving this because you&apos;re on the Glimms waitlist.{' '}
-              <Link href={`${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe/me`}
+              <Link href={unsubscribeUrl}
                     style={{ color: '#7A6E64' }}>
                 Unsubscribe
               </Link>

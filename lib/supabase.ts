@@ -1,41 +1,73 @@
+import 'server-only';
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+/**
+ * Public Supabase client (anon key). Safe for server-side use only.
+ * The anon key is intentionally public (NEXT_PUBLIC_) but this module is
+ * server-only to prevent accidental bundling of the service-role key.
+ */
 let cachedClient: SupabaseClient | null = null;
 
-export function getSupabase(): SupabaseClient {
-  if (!cachedClient) {
-    cachedClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+function assertPublicEnv(): { url: string; anonKey: string } {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    throw new Error(
+      'Missing Supabase public env vars: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY',
     );
+  }
+  return { url, anonKey };
+}
+
+export function getSupabase(): SupabaseClient {
+  assertPublicEnv();
+  if (!cachedClient) {
+    const { url, anonKey } = assertPublicEnv();
+    cachedClient = createClient(url, anonKey);
   }
   return cachedClient;
 }
 
+/**
+ * Admin client — uses SUPABASE_SERVICE_ROLE_KEY (secret, never NEXT_PUBLIC).
+ * Guarded to run only on the server. Never import this in a Client Component.
+ */
 let cachedAdminClient: SupabaseClient | null = null;
 
-export function supabaseAdmin() {
+function assertAdminEnv(): { url: string; serviceRoleKey: string } {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url) throw new Error('Missing env: NEXT_PUBLIC_SUPABASE_URL');
+  if (!serviceRoleKey) throw new Error('Missing env: SUPABASE_SERVICE_ROLE_KEY (server-only)');
+  return { url, serviceRoleKey };
+}
+
+export function supabaseAdmin(): SupabaseClient {
+  if (typeof window !== 'undefined') {
+    throw new Error('supabaseAdmin() must only be called on the server');
+  }
+  assertAdminEnv();
   if (!cachedAdminClient) {
-    cachedAdminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
+    const { url, serviceRoleKey } = assertAdminEnv();
+    cachedAdminClient = createClient(url, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
   }
   return cachedAdminClient;
 }
 
 export interface WaitlistEntry {
-  id:             string;
-  email:          string;
-  name:           string | null;
-  referral_code:  string;
-  referred_by:    string | null;
+  id: string;
+  email: string;
+  name: string | null;
+  referral_code: string;
+  referred_by: string | null;
   referral_count: number;
-  position:       number;
-  source:         string;
-  unsubscribed:   boolean;
-  created_at:     string;
+  position: number;
+  source: string;
+  unsubscribed: boolean;
+  created_at: string;
 }
 
 export function effectivePosition(entry: WaitlistEntry): number {

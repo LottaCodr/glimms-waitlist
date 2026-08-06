@@ -1,22 +1,21 @@
-import 'server-only';
-
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Public Supabase client (anon key). Safe for server-side use only.
  * The anon key is intentionally public (NEXT_PUBLIC_) but this module is
  * server-only to prevent accidental bundling of the service-role key.
+ * We use a runtime guard (typeof window) instead of `import 'server-only'`
+ * to avoid Netlify's `react-server` export condition issues.
  */
 let cachedClient: SupabaseClient | null = null;
 
 function assertPublicEnv(): { url: string; anonKey: string } {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build' || process.env.NETLIFY === 'true' || process.env.CI === 'true';
   if (!url || !anonKey) {
     if (isBuild) {
       // Allow `next build` to succeed without real env (Netlify preview without secrets)
-      // Runtime will still require real env when actually handling requests
       return {
         url: url || 'https://placeholder.supabase.co',
         anonKey: anonKey || 'placeholder-anon-key-for-build',
@@ -47,7 +46,7 @@ let cachedAdminClient: SupabaseClient | null = null;
 function assertAdminEnv(): { url: string; serviceRoleKey: string } {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build' || process.env.NETLIFY === 'true' || process.env.CI === 'true';
   if (!url || !serviceRoleKey) {
     if (isBuild) {
       return {

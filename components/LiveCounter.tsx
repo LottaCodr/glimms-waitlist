@@ -1,23 +1,23 @@
-import { getAppUrl } from '@/lib/utils';
+'use client';
+import { useState, useEffect } from 'react';
 
-async function getCount(): Promise<number> {
+export function LiveCounter() {
   const base = parseInt(process.env.NEXT_PUBLIC_BASE_COUNT ?? '2847', 10);
-  try {
-    // getAppUrl() is NEXT_PUBLIC_APP_URL — safe to expose, intentionally public
-    const res = await fetch(`${getAppUrl()}/api/stats`, {
-      next: { revalidate: 60 },
-    });
+  const [count, setCount] = useState<number>(base);
 
-    if (!res.ok) return base;
-    const data = (await res.json()) as { count?: number };
-    return typeof data.count === 'number' ? data.count : base;
-  } catch {
-    return base;
-  }
-}
-
-export async function LiveCounter() {
-  const count = await getCount();
+  useEffect(() => {
+    let cancelled = false;
+    // Fetch live count at runtime, not at build time — avoids Netlify build fetching external URL
+    fetch('/api/stats', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data && typeof data.count === 'number') setCount(data.count);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [base]);
 
   return (
     <div className="flex items-center gap-5">

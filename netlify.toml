@@ -1,18 +1,9 @@
+[build]
+  command = "NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key NEXT_PUBLIC_APP_URL=https://glimms.ai NEXT_PUBLIC_BASE_COUNT=2847 NEXT_PUBLIC_PLAUSIBLE_DOMAIN=glimms.ai SUPABASE_SERVICE_ROLE_KEY=placeholder-service-role RESEND_API_KEY=re_placeholder RESEND_FROM_EMAIL=hello@glimms.ai RESEND_FROM_NAME=Glimms npm run build"
+  publish = ".next"
+
 [build.environment]
   NODE_VERSION = "20"
-
-[context.deploy-preview.environment]
-  NEXT_PUBLIC_SUPABASE_URL = "https://placeholder.supabase.co"
-  NEXT_PUBLIC_SUPABASE_ANON_KEY = "placeholder-anon-key"
-  NEXT_PUBLIC_APP_URL = "https://glimms.ai"
-  NEXT_PUBLIC_BASE_COUNT = "2847"
-  NEXT_PUBLIC_PLAUSIBLE_DOMAIN = "glimms.ai"
-  SUPABASE_SERVICE_ROLE_KEY = "placeholder-service-role"
-  RESEND_API_KEY = "re_placeholder"
-  RESEND_FROM_EMAIL = "hello@glimms.ai"
-  RESEND_FROM_NAME = "Glimms"
-
-[context.branch-deploy.environment]
   NEXT_PUBLIC_SUPABASE_URL = "https://placeholder.supabase.co"
   NEXT_PUBLIC_SUPABASE_ANON_KEY = "placeholder-anon-key"
   NEXT_PUBLIC_APP_URL = "https://glimms.ai"

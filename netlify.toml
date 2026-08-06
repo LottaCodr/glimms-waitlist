@@ -22,3 +22,6 @@
   for = "/api/*"
   [headers.values]
     Cache-Control = "no-store"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

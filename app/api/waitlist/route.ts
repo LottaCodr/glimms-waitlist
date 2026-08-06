@@ -12,8 +12,31 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+
+  let rawBody: unknown;
+  
   try {
-    const input = schema.safeParse(await req.json());
+    rawBody = await req.text();
+  } catch (err) {
+    console.error('Error parsing request body:', err);
+    return NextResponse.json({ error: 'Request body is missing or not valid JSON' }, { status: 400 });
+  }
+
+  //Gaurd: if body was double-stringified, parse it again
+  if(typeof rawBody === 'string') {
+    try {
+      rawBody = JSON.parse(rawBody);
+    } catch (err) {
+      console.error('Error parsing request body:', err);
+      return NextResponse.json({ error: 'Request body is not valid JSON' }, { status: 400 });
+    }
+  }
+
+  //log what actually got parsed - remove this after debugging
+  console.log('Raw body parsed:', rawBody);
+
+  try {
+    const input = schema.safeParse(rawBody);
     if (!input.success) {
       return NextResponse.json({ error: input.error.errors[0]?.message ?? 'Invalid input' }, { status: 400 });
     }
@@ -43,17 +66,33 @@ export async function POST(req: NextRequest) {
       if (ref) validatedReferredBy = referredBy;
     }
 
-    // Insert
+    // ── Insert ────────────────────────────────────────────────────────────────────
     const referralCode = generateReferralCode();
-    const { data: entry, error } = await db.from('waitlist_entries').insert({
-      email: email.toLowerCase(), name: name ?? null,
-      referral_code: referralCode, referred_by: validatedReferredBy,
-      source: source ?? (validatedReferredBy ? 'referral' : 'direct'),
-    }).select().single();
+    const { error: insertError } = await db
+      .from('waitlist_entries')
+      .insert({
+        email:         email.toLowerCase(),
+        name:          name ?? null,
+        referral_code: referralCode,
+        referred_by:   validatedReferredBy,
+        source:        source ?? (validatedReferredBy ? 'referral' : 'direct'),
+      });
 
-    if (error || !entry) {
-      console.error('Insert error:', error);
+    if (insertError) {
+      console.error('Insert error:', insertError);
       return NextResponse.json({ error: 'Failed to join waitlist' }, { status: 500 });
+    }
+
+    // ── Fetch the created row ─────────────────────────────────────────────────────
+    const { data: entry, error: fetchError } = await db
+      .from('waitlist_entries')
+      .select('*')
+      .eq('referral_code', referralCode)
+      .single();
+
+    if (fetchError || !entry) {
+      console.error('Fetch error:', fetchError);
+      return NextResponse.json({ error: 'Failed to retrieve entry' }, { status: 500 });
     }
 
     const position = effectivePosition(entry as WaitlistEntry);

@@ -23,29 +23,16 @@ export function WaitlistForm({ referredBy, size = 'default' }: Props) {
     setLoading(true);
     setError('');
 
-    // Explicitly typed object - no undefined values, no surprises
-
-    const payload = {
-      email: email.trim(),
-      source: referredBy ? 'referral' : 'direct',
-      name: name.trim() || undefined,
-      referredBy: referredBy || undefined,
-    };
-
-    if(name.trim()) payload.name = name.trim();
-    if(referredBy) payload.referredBy = referredBy;
-
-    //BUild the body explicitly - never pass undefined values
-    const body = JSON.stringify(payload);
-
     try {
       const res  = await fetch('/api/waitlist', {
         method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          name:  name.trim() || undefined,
+          referredBy,
+          source: referredBy ? 'referral' : 'direct',
+        }),
       });
 
       const data = await res.json();

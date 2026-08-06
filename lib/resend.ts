@@ -1,49 +1,86 @@
 import { Resend } from 'resend';
 import { WelcomeEmail } from '@/emails/WelcomeEmail';
 import { ReferralNotificationEmail } from '@/emails/ReferralNotificationEmail';
+import { getAppUrl } from '@/lib/utils';
 
 let resendClient: Resend | null = null;
+
 function getResend(): Resend {
+  if (typeof window !== 'undefined') {
+    throw new Error('Resend client must only be used on the server');
+  }
+  const apiKey = process.env.RESEND_API_KEY;
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build' || process.env.NETLIFY === 'true' || process.env.CI === 'true';
+  if (!apiKey) {
+    if (isBuild) {
+      if (!resendClient) resendClient = new Resend('re_placeholder_for_build');
+      return resendClient;
+    }
+    throw new Error('Missing env: RESEND_API_KEY (server-only)');
+  }
   if (!resendClient) {
-    resendClient = new Resend(process.env.RESEND_API_KEY);
+    resendClient = new Resend(apiKey);
   }
   return resendClient;
 }
 
-const FROM = `${process.env.RESEND_FROM_NAME ?? 'Glimms'} <${process.env.RESEND_FROM_EMAIL ?? 'hello@glimms.ai'}>`;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://glimms.ai';
+function getFrom(): string {
+  const name = process.env.RESEND_FROM_NAME ?? 'Glimms';
+  const email = process.env.RESEND_FROM_EMAIL ?? 'hello@glimms.ai';
+  return `${name} <${email}>`;
+}
 
 export async function sendWelcomeEmail(opts: {
-  email: string; name: string | null; position: number; referralCode: string;
+  email: string;
+  name: string | null;
+  position: number;
+  referralCode: string;
 }) {
+  const appUrl = getAppUrl();
+  const referralUrl = `${appUrl}/r/${opts.referralCode}`;
+  const confirmUrl = `${appUrl}/confirmed/${opts.referralCode}`;
+  const unsubscribeUrl = `${appUrl}/unsubscribe/${opts.referralCode}`;
+  const privacyUrl = `${appUrl}/privacy`;
+
   await getResend().emails.send({
-    from:    FROM,
-    to:      opts.email,
+    from: getFrom(),
+    to: opts.email,
     subject: `You're on the Glimms waitlist — position #${opts.position}`,
-    react:   WelcomeEmail({
-      name:         opts.name,
-      position:     opts.position,
-      referralUrl:  `${APP_URL}/r/${opts.referralCode}`,
-      confirmUrl:   `${APP_URL}/confirmed/${opts.referralCode}`,
+    react: WelcomeEmail({
+      name: opts.name,
+      position: opts.position,
+      referralUrl,
+      confirmUrl,
       referralCode: opts.referralCode,
+      unsubscribeUrl,
+      privacyUrl,
     }),
   });
 }
 
 export async function sendReferralNotificationEmail(opts: {
-  referrerEmail: string; referrerName: string | null;
-  newPosition: number; referralCount: number; referralCode: string;
+  referrerEmail: string;
+  referrerName: string | null;
+  newPosition: number;
+  referralCount: number;
+  referralCode: string;
 }) {
+  const appUrl = getAppUrl();
+  const referralUrl = `${appUrl}/r/${opts.referralCode}`;
+  const dashboardUrl = `${appUrl}/confirmed/${opts.referralCode}`;
+  const unsubscribeUrl = `${appUrl}/unsubscribe/${opts.referralCode}`;
+
   await getResend().emails.send({
-    from:    FROM,
-    to:      opts.referrerEmail,
+    from: getFrom(),
+    to: opts.referrerEmail,
     subject: `Someone joined Glimms using your link 🎉`,
-    react:   ReferralNotificationEmail({
-      name:          opts.referrerName,
-      newPosition:   opts.newPosition,
+    react: ReferralNotificationEmail({
+      name: opts.referrerName,
+      newPosition: opts.newPosition,
       referralCount: opts.referralCount,
-      referralUrl:   `${APP_URL}/r/${opts.referralCode}`,
-      dashboardUrl:  `${APP_URL}/confirmed/${opts.referralCode}`,
+      referralUrl,
+      dashboardUrl,
+      unsubscribeUrl,
     }),
   });
 }

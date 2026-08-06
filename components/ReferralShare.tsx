@@ -1,19 +1,17 @@
 'use client';
 import { useState } from 'react';
-import { getAppUrl } from '@/lib/utils';
 
 interface Props {
   referralCode: string;
-  position: number;
+  position:     number;
   referralCount: number;
 }
 
 export function ReferralShare({ referralCode, position, referralCount }: Props) {
   const [copied, setCopied] = useState(false);
-  // NEXT_PUBLIC_APP_URL is intentionally public — safe for client bundle
-  const appUrl = getAppUrl();
+  const appUrl      = process.env.NEXT_PUBLIC_APP_URL ?? 'https://glimms.ai';
   const referralUrl = `${appUrl}/r/${referralCode}`;
-  const shareText = `I just joined the Glimms waitlist — AI that styles what you already own. No more buying, just smarter styling. Join me:`;
+  const shareText   = `I just joined the Glimms waitlist — AI that styles what you already own. No more buying, just smarter styling. Join me:`;
 
   async function copy() {
     await navigator.clipboard.writeText(referralUrl);

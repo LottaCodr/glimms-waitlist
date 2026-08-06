@@ -12,7 +12,14 @@ function getResend(): Resend {
     throw new Error('Resend client must only be used on the server');
   }
   const apiKey = process.env.RESEND_API_KEY;
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
   if (!apiKey) {
+    if (isBuild) {
+      // Allow build to succeed without real key (preview deploys)
+      // Create a dummy client that will not be used at build time
+      if (!resendClient) resendClient = new Resend('re_placeholder_for_build');
+      return resendClient;
+    }
     throw new Error('Missing env: RESEND_API_KEY (server-only)');
   }
   if (!resendClient) {

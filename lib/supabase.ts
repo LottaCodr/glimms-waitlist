@@ -12,7 +12,16 @@ let cachedClient: SupabaseClient | null = null;
 function assertPublicEnv(): { url: string; anonKey: string } {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
   if (!url || !anonKey) {
+    if (isBuild) {
+      // Allow `next build` to succeed without real env (Netlify preview without secrets)
+      // Runtime will still require real env when actually handling requests
+      return {
+        url: url || 'https://placeholder.supabase.co',
+        anonKey: anonKey || 'placeholder-anon-key-for-build',
+      };
+    }
     throw new Error(
       'Missing Supabase public env vars: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY',
     );
@@ -38,9 +47,18 @@ let cachedAdminClient: SupabaseClient | null = null;
 function assertAdminEnv(): { url: string; serviceRoleKey: string } {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url) throw new Error('Missing env: NEXT_PUBLIC_SUPABASE_URL');
-  if (!serviceRoleKey) throw new Error('Missing env: SUPABASE_SERVICE_ROLE_KEY (server-only)');
-  return { url, serviceRoleKey };
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
+  if (!url || !serviceRoleKey) {
+    if (isBuild) {
+      return {
+        url: url || 'https://placeholder.supabase.co',
+        serviceRoleKey: serviceRoleKey || 'placeholder-service-role-key-for-build',
+      };
+    }
+    if (!url) throw new Error('Missing env: NEXT_PUBLIC_SUPABASE_URL');
+    if (!serviceRoleKey) throw new Error('Missing env: SUPABASE_SERVICE_ROLE_KEY (server-only)');
+  }
+  return { url: url!, serviceRoleKey: serviceRoleKey! };
 }
 
 export function supabaseAdmin(): SupabaseClient {

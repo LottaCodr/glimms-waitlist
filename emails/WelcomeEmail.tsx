@@ -4,25 +4,16 @@ import {
 } from '@react-email/components';
 
 interface Props {
-  name: string | null;
-  position: number;
-  referralUrl: string;
-  confirmUrl: string;
+  name:         string | null;
+  position:     number;
+  referralUrl:  string;
+  confirmUrl:   string;
   referralCode: string;
-  unsubscribeUrl: string;
-  privacyUrl: string;
 }
 
-export function WelcomeEmail({
-  name,
-  position,
-  referralUrl,
-  referralCode,
-  unsubscribeUrl,
-  privacyUrl,
-}: Props) {
+export function WelcomeEmail({ name, position, referralUrl, referralCode }: Props) {
   const firstName = name?.split(' ')[0] ?? null;
-  const greeting = firstName ? `Hey ${firstName},` : 'Hey,';
+  const greeting  = firstName ? `Hey ${firstName},` : 'Hey,';
 
   return (
     <Html>
@@ -107,7 +98,7 @@ export function WelcomeEmail({
             {[
               { icon: '📸', title: 'Scan', body: 'Point your camera at your wardrobe, room, or garden.' },
               { icon: '🧠', title: 'Analyse', body: 'AI reads your climate, occasion, and cultural context.' },
-              { icon: '✦', title: 'Style', body: 'Get 20+ curated combinations from what you already own.' },
+              { icon: '✦',  title: 'Style',   body: 'Get 20+ curated combinations from what you already own.' },
             ].map((step) => (
               <Row key={step.title} style={{ marginBottom: '12px' }}>
                 <Column style={{ width: '36px', verticalAlign: 'top', paddingTop: '2px' }}>
@@ -143,14 +134,14 @@ export function WelcomeEmail({
             </Text>
             <Text style={footerText}>
               <Link
-                href={unsubscribeUrl}
+                href={`${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe/${referralCode}`}
                 style={{ color: '#7A6E64' }}
               >
                 Unsubscribe
               </Link>
               {' '}·{' '}
               <Link
-                href={privacyUrl}
+                href={`${process.env.NEXT_PUBLIC_APP_URL}/privacy`}
                 style={{ color: '#7A6E64' }}
               >
                 Privacy Policy

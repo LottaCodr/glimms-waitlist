@@ -1,16 +1,16 @@
-import { getAppUrl } from '@/lib/utils';
-
 async function getCount(): Promise<number> {
-  const base = parseInt(process.env.NEXT_PUBLIC_BASE_COUNT ?? '2847', 10);
+  const base = parseInt(process.env.NEXT_PUBLIC_BASE_COUNT ?? '2847');
   try {
-    // getAppUrl() is NEXT_PUBLIC_APP_URL — safe to expose, intentionally public
-    const res = await fetch(`${getAppUrl()}/api/stats`, {
-      next: { revalidate: 60 },
-    });
+    const url = process.env.NEXT_PUBLIC_APP_URL;
+    if (!url) return base;
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/stats`,
+      { next: { revalidate: 60 } },
+    );
 
     if (!res.ok) return base;
-    const data = (await res.json()) as { count?: number };
-    return typeof data.count === 'number' ? data.count : base;
+    const data = await res.json();
+    return data.count ?? base;
   } catch {
     return base;
   }

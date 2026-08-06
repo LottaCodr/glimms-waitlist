@@ -7,14 +7,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 const nanoid = customAlphabet('0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz', 8);
-export function generateReferralCode(): string {
-  return nanoid();
-}
+export function generateReferralCode(): string { return nanoid(); }
 
-/**
- * Public app URL — uses NEXT_PUBLIC_APP_URL which is intentionally public.
- * Safe to call from client or server. Falls back to https://glimms.ai.
- */
 export function getAppUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? 'https://glimms.ai';
 }

@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabaseAdmin()
     .from('waitlist_entries')
-    .update({ unsubscribed: true })
+    .update({ unsubscribed: true, unsubscribed_at: new Date().toISOString() })
     .eq('referral_code', code);
 
   if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 });

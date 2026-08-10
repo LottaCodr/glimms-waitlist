@@ -9,8 +9,13 @@ CREATE TABLE waitlist_entries (
   referral_count INTEGER     NOT NULL DEFAULT 0,
   position       INTEGER     NOT NULL,
   source         TEXT        DEFAULT 'direct',
-  unsubscribed   BOOLEAN     NOT NULL DEFAULT FALSE,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  unsubscribed       BOOLEAN     NOT NULL DEFAULT FALSE,
+  unsubscribed_at    TIMESTAMPTZ,
+  marketing_consent  BOOLEAN     NOT NULL DEFAULT FALSE,
+  consented_at       TIMESTAMPTZ,
+  email_status       TEXT        NOT NULL DEFAULT 'active' CHECK (email_status IN ('active', 'bounced', 'complained')),
+  email_bounced_at   TIMESTAMPTZ,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE SEQUENCE waitlist_position_seq START 1;

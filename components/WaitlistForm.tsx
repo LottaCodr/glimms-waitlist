@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Turnstile } from '@/components/Turnstile';
 
 interface Props {
   referredBy?: string;
@@ -12,13 +13,16 @@ export function WaitlistForm({ referredBy, size = 'default' }: Props) {
   const [email,   setEmail]   = useState('');
   const [name,    setName]    = useState('');
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
+  const [error, setError] = useState('');
+  const [consent, setConsent] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const onTurnstileVerify = useCallback((token: string) => setTurnstileToken(token), []);
 
   const isLarge = size === 'large';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !consent) return;
 
     setLoading(true);
     setError('');
@@ -32,6 +36,8 @@ export function WaitlistForm({ referredBy, size = 'default' }: Props) {
       source: effectiveReferredBy ? 'referral' : 'direct',
       name: name.trim() || undefined,
       referredBy: effectiveReferredBy || undefined,
+      consent: true,
+      turnstileToken: turnstileToken || undefined,
     };
 
     //BUild the body explicitly - never pass undefined values
@@ -120,8 +126,23 @@ export function WaitlistForm({ referredBy, size = 'default' }: Props) {
         </button>
       </div>
 
+      <label className="flex items-start gap-2.5 cursor-pointer text-left">
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={event => setConsent(event.target.checked)}
+          className="mt-0.5 h-4 w-4 accent-gold"
+          required
+        />
+        <span className="font-sans text-xs leading-relaxed text-muted">
+          I agree to receive waitlist and launch emails from Glimms. I can unsubscribe at any time.
+        </span>
+      </label>
+
+      <Turnstile onVerify={onTurnstileVerify} />
+
       {error && (
-        <p className="text-red-400 font-sans text-sm">{error}</p>
+        <p className="text-red-400 font-sans text-sm" role="alert">{error}</p>
       )}
 
       <p className="font-mono text-[10px] text-muted tracking-wider">

@@ -34,8 +34,13 @@ export interface WaitlistEntry {
   referral_count: number;
   position:       number;
   source:         string;
-  unsubscribed:   boolean;
-  created_at:     string;
+  unsubscribed:       boolean;
+  unsubscribed_at:    string | null;
+  marketing_consent:  boolean;
+  consented_at:       string | null;
+  email_status:       'active' | 'bounced' | 'complained';
+  email_bounced_at:   string | null;
+  created_at:         string;
 }
 
 export function effectivePosition(entry: WaitlistEntry): number {

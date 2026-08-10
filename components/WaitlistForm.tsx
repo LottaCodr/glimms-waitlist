@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Turnstile } from '@/components/Turnstile';
 
 interface Props {
   referredBy?: string;
@@ -8,32 +9,36 @@ interface Props {
 }
 
 export function WaitlistForm({ referredBy, size = 'default' }: Props) {
-  const router  = useRouter();
+  const router = useRouter();
   const [email,   setEmail]   = useState('');
   const [name,    setName]    = useState('');
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
+  const [error, setError] = useState('');
+  const [consent, setConsent] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const onTurnstileVerify = useCallback((token: string) => setTurnstileToken(token), []);
 
   const isLarge = size === 'large';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !consent) return;
 
     setLoading(true);
     setError('');
 
-    // Explicitly typed object - no undefined values, no surprises
+    // Referral links redirect to `/?ref=CODE`; read it at submit time so both forms retain it.
+    const referralFromUrl = new URLSearchParams(window.location.search).get('ref')?.trim();
+    const effectiveReferredBy = referredBy ?? referralFromUrl;
 
     const payload = {
       email: email.trim(),
-      source: referredBy ? 'referral' : 'direct',
+      source: effectiveReferredBy ? 'referral' : 'direct',
       name: name.trim() || undefined,
-      referredBy: referredBy || undefined,
+      referredBy: effectiveReferredBy || undefined,
+      consent: true,
+      turnstileToken: turnstileToken || undefined,
     };
-
-    if(name.trim()) payload.name = name.trim();
-    if(referredBy) payload.referredBy = referredBy;
 
     //BUild the body explicitly - never pass undefined values
     const body = JSON.stringify(payload);
@@ -76,6 +81,9 @@ export function WaitlistForm({ referredBy, size = 'default' }: Props) {
       {/* Name input (optional) */}
       <input
         type="text"
+        autoComplete="given-name"
+        maxLength={100}
+        aria-label="First name (optional)"
         placeholder="First name (optional)"
         value={name}
         onChange={e => setName(e.target.value)}
@@ -91,6 +99,9 @@ export function WaitlistForm({ referredBy, size = 'default' }: Props) {
         <input
           type="email"
           required
+          autoComplete="email"
+          inputMode="email"
+          aria-label="Email address"
           placeholder="your@email.com"
           value={email}
           onChange={e => setEmail(e.target.value)}
@@ -115,8 +126,23 @@ export function WaitlistForm({ referredBy, size = 'default' }: Props) {
         </button>
       </div>
 
+      <label className="flex items-start gap-2.5 cursor-pointer text-left">
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={event => setConsent(event.target.checked)}
+          className="mt-0.5 h-4 w-4 accent-gold"
+          required
+        />
+        <span className="font-sans text-xs leading-relaxed text-muted">
+          I agree to receive waitlist and launch emails from Glimms. I can unsubscribe at any time.
+        </span>
+      </label>
+
+      <Turnstile onVerify={onTurnstileVerify} />
+
       {error && (
-        <p className="text-red-400 font-sans text-sm">{error}</p>
+        <p className="text-red-400 font-sans text-sm" role="alert">{error}</p>
       )}
 
       <p className="font-mono text-[10px] text-muted tracking-wider">

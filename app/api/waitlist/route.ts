@@ -3,15 +3,33 @@ import { z } from 'zod';
 import { supabaseAdmin, effectivePosition, WaitlistEntry } from '@/lib/supabase';
 import { sendWelcomeEmail, sendReferralNotificationEmail } from '@/lib/resend';
 import { generateReferralCode } from '@/lib/utils';
+import { checkWaitlistRateLimit } from '@/lib/rate-limit';
+import { verifyTurnstile } from '@/lib/turnstile';
 
 const schema = z.object({
   email:      z.string().email('Please enter a valid email address'),
   name:       z.string().max(100).optional(),
   referredBy: z.string().max(20).optional(),
-  source:     z.string().max(50).optional(),
+  source: z.string().max(50).optional(),
+  consent: z.literal(true, { errorMap: () => ({ message: 'Please agree to receive waitlist emails' }) }),
+  turnstileToken: z.string().max(2048).optional(),
 });
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  let rateLimit: { success: boolean };
+  try {
+    rateLimit = await checkWaitlistRateLimit(ip);
+  } catch (error) {
+    console.error('Rate limit check failed:', error);
+    return NextResponse.json({ error: 'Unable to process signup right now. Please try again shortly.' }, { status: 503 });
+  }
+  if (!rateLimit.success) {
+    const message = process.env.NODE_ENV === 'production' && !process.env.UPSTASH_REDIS_REST_URL
+      ? 'Waitlist protection is not configured. Please contact us.'
+      : 'Too many attempts. Please try again in a few minutes.';
+    return NextResponse.json({ error: message }, { status: 429 });
+  }
 
   let rawBody: unknown;
   
@@ -32,16 +50,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  //log what actually got parsed - remove this after debugging
-  console.log('Raw body parsed:', rawBody);
-
   try {
     const input = schema.safeParse(rawBody);
     if (!input.success) {
       return NextResponse.json({ error: input.error.errors[0]?.message ?? 'Invalid input' }, { status: 400 });
     }
 
-    const { email, name, referredBy, source } = input.data;
+    const { email, name, referredBy, source, turnstileToken } = input.data;
+    if (!await verifyTurnstile(turnstileToken, ip)) {
+      return NextResponse.json({ error: 'Verification failed. Please try again.' }, { status: 400 });
+    }
+
     const db = supabaseAdmin();
 
     // Check duplicate
@@ -76,6 +95,8 @@ export async function POST(req: NextRequest) {
         referral_code: referralCode,
         referred_by:   validatedReferredBy,
         source:        source ?? (validatedReferredBy ? 'referral' : 'direct'),
+        marketing_consent: true,
+        consented_at: new Date().toISOString(),
       });
 
     if (insertError) {
@@ -97,25 +118,32 @@ export async function POST(req: NextRequest) {
 
     const position = effectivePosition(entry as WaitlistEntry);
 
-    // Welcome email (non-blocking)
-    sendWelcomeEmail({ email, name: name ?? null, position, referralCode })
-      .catch(e => console.error('Welcome email failed:', e));
+    // Await delivery attempts so serverless execution cannot end before Resend receives them.
+    // A delivery failure never rolls back a successful waitlist signup.
+    await sendWelcomeEmail({ email, name: name ?? null, position, referralCode })
+      .catch(error => console.error('Welcome email failed:', error));
 
-    // Notify referrer (non-blocking)
     if (validatedReferredBy) {
-      db.from('waitlist_entries').select('email, name, referral_count, position, referral_code')
-        .eq('referral_code', validatedReferredBy).single()
-        .then(({ data: referrer }) => {
-          if (!referrer) return;
-          sendReferralNotificationEmail({
-            referrerEmail: referrer.email, referrerName: referrer.name,
-            newPosition: effectivePosition(referrer as WaitlistEntry),
-            referralCount: referrer.referral_count, referralCode: referrer.referral_code,
-          }).catch(console.error);
-        });
+      const { data: referrer } = await db
+        .from('waitlist_entries')
+        .select('email, name, referral_count, position, referral_code')
+        .eq('referral_code', validatedReferredBy)
+        .eq('unsubscribed', false)
+        .eq('email_status', 'active')
+        .single();
+
+      if (referrer) {
+        await sendReferralNotificationEmail({
+          referrerEmail: referrer.email,
+          referrerName: referrer.name,
+          newPosition: effectivePosition(referrer as WaitlistEntry),
+          referralCount: referrer.referral_count,
+          referralCode: referrer.referral_code,
+        }).catch(error => console.error('Referral notification email failed:', error));
+      }
     }
 
-    return NextResponse.json({ success: true, position, referralCode });
+    return NextResponse.json({ success: true, position, referralCode }, { status: 201 });
 
   } catch (err) {
     console.error('Waitlist API error:', err);

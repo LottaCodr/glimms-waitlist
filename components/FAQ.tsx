@@ -4,7 +4,7 @@ import { useState } from 'react';
 const FAQS = [
   {
     q: 'When does Glimms launch?',
-    a: 'We are targeting a public beta in Q4 2025. Waitlist members get access first — the earlier you join, the sooner you get in.',
+    a: 'We are preparing the next private beta cohort. Waitlist members receive access first — the earlier you join, the sooner you get in. We will email the confirmed launch date to members.',
   },
   {
     q: 'Is it free?',

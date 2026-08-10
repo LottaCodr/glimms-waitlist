@@ -10,17 +10,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink:   '#0A0806',
-        ink2:  '#111111',
-        ink3:  '#1C1814',
-        ink4:  '#252018',
-        faint: '#2A251F',
-        gold:  '#C9A96E',
-        gold2: '#8A7148',
-        gold3: '#E8D5A8',
-        cream: '#F5F0E8',
-        warm:  '#D4C4A8',
-        muted: '#7A6E64',
+        ink:   'rgb(var(--ink) / <alpha-value>)',
+        ink2:  'rgb(var(--ink-2) / <alpha-value>)',
+        ink3:  'rgb(var(--ink-3) / <alpha-value>)',
+        ink4:  'rgb(var(--ink-4) / <alpha-value>)',
+        faint: 'rgb(var(--faint) / <alpha-value>)',
+        gold:  'rgb(var(--gold) / <alpha-value>)',
+        gold2: 'rgb(var(--gold-2) / <alpha-value>)',
+        gold3: 'rgb(var(--gold-3) / <alpha-value>)',
+        cream: 'rgb(var(--cream) / <alpha-value>)',
+        warm:  'rgb(var(--warm) / <alpha-value>)',
+        muted: 'rgb(var(--muted) / <alpha-value>)',
       },
       fontFamily: {
         display: ['var(--font-cormorant)', 'Georgia', 'serif'],

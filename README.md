@@ -56,11 +56,12 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # Resend
 RESEND_API_KEY=re_xxxxxxxxxxxxx
-RESEND_FROM_EMAIL=hello@glimms.ai
+RESEND_FROM_EMAIL=hello@your-domain.com
 RESEND_FROM_NAME=Glimms
+RESEND_REPLY_TO=hello@your-domain.com
 
-# App
-NEXT_PUBLIC_APP_URL=https://glimms.ai
+# App — use this production URL until you attach a custom domain
+NEXT_PUBLIC_APP_URL=https://glimms-waitlist.vercel.app
 NEXT_PUBLIC_BASE_COUNT=2847
 
 # Plausible (optional)
@@ -74,12 +75,42 @@ NEXT_PUBLIC_PLAUSIBLE_DOMAIN=glimms.ai
 3. Paste the contents of `supabase/schema.sql` and run it
 4. Copy your project URL + anon key + service role key into `.env.local`
 
-## Resend Setup
+## Resend Setup (production checklist)
 
-1. Sign up at [resend.com](https://resend.com)
-2. Add and verify your sending domain (`glimms.ai`)
-3. Create an API key
-4. Add to `.env.local`
+The site sends a welcome email after a successful signup and a referral notification to the referrer. It now **awaits the Resend handoff** before the serverless function completes, and logs a clear error if Resend rejects a message. A mail failure never removes a valid waitlist signup.
+
+### In the Resend dashboard
+
+1. **Use a domain you control.** Vercel's `glimms-waitlist.vercel.app` cannot be used as the sender domain. Use a custom domain/subdomain such as `glimms.ai` or `mail.glimms.ai`.
+2. In Resend, go to **Domains → Add Domain**, enter the domain, and copy every DNS record Resend shows (usually SPF and DKIM records) into the DNS provider that manages that domain. Do not replace existing SPF records; merge them if your provider already has one.
+3. Wait for Resend to show the domain as **Verified**. Only then set `RESEND_FROM_EMAIL` to an address on that exact verified domain, for example `hello@glimms.ai`. The display name is configured with `RESEND_FROM_NAME=Glimms`.
+4. Go to **API Keys → Create API Key**. Give it a limited production name such as `glimms-waitlist-production`, select sending permission, copy it once, and set it as `RESEND_API_KEY`. Never expose it in browser code or commit it.
+5. Set `RESEND_REPLY_TO` to a real inbox you monitor. Send a signup to yourself and check Resend's **Emails** activity log for a `Delivered` event.
+
+### In Vercel
+
+1. Open your project → **Settings → Environment Variables**.
+2. Add `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, and `RESEND_REPLY_TO` for **Production** (and Preview too, only if you want preview deployments to send real email).
+3. Add `NEXT_PUBLIC_APP_URL=https://glimms-waitlist.vercel.app` for Production. Once a custom domain is connected in Vercel, change this to its canonical `https://` URL. This controls links in emails, sharing, and metadata.
+4. Redeploy after changing variables. Test a signup in production, then inspect Vercel function logs and Resend's email activity.
+
+> Resend's unverified/test sending is limited and is not a substitute for domain verification. Configure the sender domain first, then use that same domain in `RESEND_FROM_EMAIL`.
+
+## Production hardening setup
+
+The project now includes consent capture, a 5-signup-per-10-minute Upstash rate limit, optional Cloudflare Turnstile verification, Resend bounce/complaint suppression, and a daily Vercel Cron purge for records that have been unsubscribed for 30 days.
+
+1. Run `supabase/migrations/20260810_waitlist_operations.sql` in the Supabase SQL Editor (new projects can use the updated `supabase/schema.sql`).
+2. Create an **Upstash Redis** database. In Vercel, add its `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. The public signup API deliberately rejects production signups when Upstash is missing rather than operating without rate limiting.
+3. In **Cloudflare Turnstile**, add your production hostname (`glimms-waitlist.vercel.app`, and later your custom domain), create a managed widget, and add `NEXT_PUBLIC_TURNSTILE_SITE_KEY` plus `TURNSTILE_SECRET_KEY` in Vercel. The client widget appears once its site key is set; the API requires it when the secret is set.
+4. In **Resend → Webhooks**, add `https://glimms-waitlist.vercel.app/api/webhooks/resend`, subscribe to `email.bounced` and `email.complained`, then put the webhook signing secret in `RESEND_WEBHOOK_SECRET`. Invalid signatures are rejected. Suppressed addresses do not receive referral notifications.
+5. Add a long random `CRON_SECRET` in Vercel. `vercel.json` schedules the daily purge at 03:00 UTC; Vercel supplies this secret to the cron request automatically.
+
+## Remaining operational work
+
+- For high-volume sending, move delivery to a durable queue (for example QStash) with retry/idempotency instead of the synchronous handoff.
+- Create an internal admin process for data exports and manual deletion requests. The schema records consent and automatically purges 30-day-old unsubscribe records, but it does not provide an operator UI.
+- Enable Vercel WAF rules as a second layer of bot protection.
 
 ## Email Preview
 

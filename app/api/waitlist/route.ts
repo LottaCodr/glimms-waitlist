@@ -32,9 +32,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  //log what actually got parsed - remove this after debugging
-  console.log('Raw body parsed:', rawBody);
-
   try {
     const input = schema.safeParse(rawBody);
     if (!input.success) {
@@ -97,25 +94,30 @@ export async function POST(req: NextRequest) {
 
     const position = effectivePosition(entry as WaitlistEntry);
 
-    // Welcome email (non-blocking)
-    sendWelcomeEmail({ email, name: name ?? null, position, referralCode })
-      .catch(e => console.error('Welcome email failed:', e));
+    // Await delivery attempts so serverless execution cannot end before Resend receives them.
+    // A delivery failure never rolls back a successful waitlist signup.
+    await sendWelcomeEmail({ email, name: name ?? null, position, referralCode })
+      .catch(error => console.error('Welcome email failed:', error));
 
-    // Notify referrer (non-blocking)
     if (validatedReferredBy) {
-      db.from('waitlist_entries').select('email, name, referral_count, position, referral_code')
-        .eq('referral_code', validatedReferredBy).single()
-        .then(({ data: referrer }) => {
-          if (!referrer) return;
-          sendReferralNotificationEmail({
-            referrerEmail: referrer.email, referrerName: referrer.name,
-            newPosition: effectivePosition(referrer as WaitlistEntry),
-            referralCount: referrer.referral_count, referralCode: referrer.referral_code,
-          }).catch(console.error);
-        });
+      const { data: referrer } = await db
+        .from('waitlist_entries')
+        .select('email, name, referral_count, position, referral_code')
+        .eq('referral_code', validatedReferredBy)
+        .single();
+
+      if (referrer) {
+        await sendReferralNotificationEmail({
+          referrerEmail: referrer.email,
+          referrerName: referrer.name,
+          newPosition: effectivePosition(referrer as WaitlistEntry),
+          referralCount: referrer.referral_count,
+          referralCode: referrer.referral_code,
+        }).catch(error => console.error('Referral notification email failed:', error));
+      }
     }
 
-    return NextResponse.json({ success: true, position, referralCode });
+    return NextResponse.json({ success: true, position, referralCode }, { status: 201 });
 
   } catch (err) {
     console.error('Waitlist API error:', err);

@@ -9,9 +9,11 @@ interface Props {
   referralUrl:  string;
   confirmUrl:   string;
   referralCode: string;
+  unsubscribeUrl: string;
+  privacyUrl: string;
 }
 
-export function WelcomeEmail({ name, position, referralUrl, referralCode }: Props) {
+export function WelcomeEmail({ name, position, referralUrl, unsubscribeUrl, privacyUrl }: Props) {
   const firstName = name?.split(' ')[0] ?? null;
   const greeting  = firstName ? `Hey ${firstName},` : 'Hey,';
 
@@ -134,14 +136,14 @@ export function WelcomeEmail({ name, position, referralUrl, referralCode }: Prop
             </Text>
             <Text style={footerText}>
               <Link
-                href={`${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe/${referralCode}`}
+                href={unsubscribeUrl}
                 style={{ color: '#7A6E64' }}
               >
                 Unsubscribe
               </Link>
               {' '}·{' '}
               <Link
-                href={`${process.env.NEXT_PUBLIC_APP_URL}/privacy`}
+                href={privacyUrl}
                 style={{ color: '#7A6E64' }}
               >
                 Privacy Policy

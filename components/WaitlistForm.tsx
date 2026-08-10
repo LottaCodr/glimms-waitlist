@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function WaitlistForm({ referredBy, size = 'default' }: Props) {
-  const router  = useRouter();
+  const router = useRouter();
   const [email,   setEmail]   = useState('');
   const [name,    setName]    = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,17 +23,16 @@ export function WaitlistForm({ referredBy, size = 'default' }: Props) {
     setLoading(true);
     setError('');
 
-    // Explicitly typed object - no undefined values, no surprises
+    // Referral links redirect to `/?ref=CODE`; read it at submit time so both forms retain it.
+    const referralFromUrl = new URLSearchParams(window.location.search).get('ref')?.trim();
+    const effectiveReferredBy = referredBy ?? referralFromUrl;
 
     const payload = {
       email: email.trim(),
-      source: referredBy ? 'referral' : 'direct',
+      source: effectiveReferredBy ? 'referral' : 'direct',
       name: name.trim() || undefined,
-      referredBy: referredBy || undefined,
+      referredBy: effectiveReferredBy || undefined,
     };
-
-    if(name.trim()) payload.name = name.trim();
-    if(referredBy) payload.referredBy = referredBy;
 
     //BUild the body explicitly - never pass undefined values
     const body = JSON.stringify(payload);
@@ -76,6 +75,9 @@ export function WaitlistForm({ referredBy, size = 'default' }: Props) {
       {/* Name input (optional) */}
       <input
         type="text"
+        autoComplete="given-name"
+        maxLength={100}
+        aria-label="First name (optional)"
         placeholder="First name (optional)"
         value={name}
         onChange={e => setName(e.target.value)}
@@ -91,6 +93,9 @@ export function WaitlistForm({ referredBy, size = 'default' }: Props) {
         <input
           type="email"
           required
+          autoComplete="email"
+          inputMode="email"
+          aria-label="Email address"
           placeholder="your@email.com"
           value={email}
           onChange={e => setEmail(e.target.value)}
